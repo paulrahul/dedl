@@ -1,4 +1,4 @@
-let isRevising = false;
+let isRevising = "normal";
 let revisionIndex = 0;
 
 let currentIndex = 0;
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function populateMarkedQuestions() {
     initializeDropdown(markedQuestions);
-    isRevising = true;
+    isRevising = "revise";
     // Load the last revised question.
     const idx = localStorage.getItem("dedlLastRevisedQuestion");
     if (idx) {
@@ -109,7 +109,7 @@ function populateMarkedQuestions() {
 
 function populateNormalQuestions() {
     initializeDropdown(Array.from(Array(data.length).keys()));
-    isRevising = false;
+    isRevising = "normal";
     // Load the last normal question.
     const idx = localStorage.getItem("dedlLastNormalQuestion");
     if (idx) {
@@ -164,9 +164,9 @@ function loadQuestion(index) {
         document.getElementById('asw_3').checked = question.asw_corr3 === 1;
     }
 
-    if (isRevising) {
+    if (isRevising == "revise") {
         localStorage.setItem('dedlLastRevisedQuestion', currentIndex.toString());
-    } else {
+    } else if (isRevising == "normal") {
         localStorage.setItem('dedlLastNormalQuestion', currentIndex.toString());
     }
 }
@@ -202,11 +202,11 @@ function checkAnswers() {
 function nextQuestion() {
     previousIndex = currentIndex;
 
-    if (isRevising) {
+    if (isRevising == "revise") {
         revisionIndex++;
         if (revisionIndex >= markedQuestions.length) {
             alert("All marked questions revised, switching to normal questions.");
-            isRevising = false;
+            isRevising = "normal";
             const idx = localStorage.getItem("dedlLastNormalQuestion");
             if (idx) {
                 currentIndex = parseInt(idx);
