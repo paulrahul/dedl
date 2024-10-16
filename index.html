@@ -21,7 +21,7 @@
 
     <div class="mode-toggle">
         <label for="mode-switch">Read Mode</label>
-        <input type="checkbox" id="mode-switch">
+        <input type="checkbox" id="mode-switch" checked>
     </div>    
 
 
@@ -58,19 +58,41 @@
         <button id="unmark" style="display: none;">Unmark Question</button>
     </div>
 
-
-    <label for="question-index">Question: </label>
-    <select id="question-index"></select>
-    <!-- <input type="text" id="question-index" placeholder="Question number"> -->
-
-    <label for="image-question-index">Image questions: </label>
-    <select id="image-question-index"></select>
-
-    <label for="video-question-index">Video questions: </label>
-    <select id="video-question-index"></select> 
+    <div class="form-group">
+        <label for="question-index">Question: </label>
+        <select id="question-index"></select>
+        <!-- <input type="text" id="question-index" placeholder="Question number"> -->
+    </div>
     
-    <label for="single-question-index">Single answer questions: </label>
-    <select id="single-question-index"></select>
+    <div class="form-group">
+        <label for="image-question-index">Image questions: </label>
+        <select id="image-question-index"></select>
+    </div>        
+
+    <div class="form-group">    
+        <label for="video-question-index">Video questions: </label>
+        <select id="video-question-index"></select> 
+    </div>        
+    
+    <div class="form-group">    
+        <label for="single-question-index">Single choice questions: </label>
+        <select id="single-question-index"></select>
+    </div>
+    
+    <div class="form-group">    
+        <label for="onechoice-question-index">1 choice questions: </label>
+        <select id="onechoice-question-index"></select>
+    </div>     
+
+    <div class="form-group">    
+        <label for="twochoice-question-index">2 choice questions: </label>
+        <select id="twochoice-question-index"></select>
+    </div>     
+
+    <div class="form-group">    
+        <label for="allchoice-question-index">All choice questions: </label>
+        <select id="allchoice-question-index"></select>
+    </div>    
 
     <!-- Video modal -->
     <div id="video-modal" class="modal" style="display: none;">

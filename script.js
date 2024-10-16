@@ -1,10 +1,20 @@
-let currentQuestionIndex = 0;
-let mode = "play";  // Modes: 'play' or 'revise'
+let isRevising = false;
+let revisionIndex = 0;
+
+let currentIndex = 0;
+let previousIndex = 0;
+let mode = "read";  // Modes: 'play' or 'revise'
 const markedQuestions = new Set();
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadQuestion(currentQuestionIndex);
-    initializeDropdown();
+    // Load the last normal question.
+    const idx = localStorage.getItem("dedlLastNormalQuestion");
+    if (idx) {
+        currentIndex = parseInt(idx);
+    }
+
+    loadQuestion(currentIndex);
+    initializeDropdown(data);
     loadMarkedQuestions();
 
     document.getElementById('submit').addEventListener('click', checkAnswers);
@@ -30,17 +40,28 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('single-question-index').addEventListener('change', (event) => {
         goToQuestion(event.target.value);
     });
+    
+    
+    document.getElementById('onechoice-question-index').addEventListener('change', (event) => {
+        goToQuestion(event.target.value);
+    });
+    document.getElementById('twochoice-question-index').addEventListener('change', (event) => {
+        goToQuestion(event.target.value);
+    });
+    document.getElementById('allchoice-question-index').addEventListener('change', (event) => {
+        goToQuestion(event.target.value);
+    });        
 
     document.getElementById('mark').addEventListener('click', markQuestion);
     document.getElementById('unmark').addEventListener('click', unmarkQuestion);
 
     document.getElementById('mode-switch').addEventListener('change', (event) => {
         if (event.target.checked) {
-            mode = 'revise'; // Switch to Read Mode
+            mode = 'read'; // Switch to Read Mode
         } else {
             mode = 'play'; // Switch to Play Mode
         }
-        loadQuestion(currentQuestionIndex); // Reload current question to reflect mode change
+        loadQuestion(currentIndex); // Reload current question to reflect mode change
     });
     
     document.addEventListener('keydown', function(event) {
@@ -74,6 +95,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };    
 });
+
+function populateMarkedQuestions() {
+    initializeDropdown(markedQuestions);
+    isRevising = true;
+    // Load the last revised question.
+    const idx = localStorage.getItem("dedlLastRevisedQuestion");
+    if (idx) {
+        currentIndex = parseInt(idx);
+    }
+    loadQuestion(currentIndex);
+}
+
+function populateNormalQuestions() {
+    initializeDropdown(Array.from(Array(data.length).keys()));
+    isRevising = false;
+    // Load the last normal question.
+    const idx = localStorage.getItem("dedlLastNormalQuestion");
+    if (idx) {
+        currentIndex = parseInt(idx);
+    }
+    loadQuestion();
+}
 
 function loadQuestion(index) {
     const question = data[index];
@@ -115,10 +158,16 @@ function loadQuestion(index) {
     toggleMarkButtons(index);
 
     // If in 'revise' mode, preselect correct answers
-    if (mode === 'revise') {
+    if (mode === 'read') {
         document.getElementById('asw_1').checked = question.asw_corr1 === 1;
         document.getElementById('asw_2').checked = question.asw_corr2 === 1;
         document.getElementById('asw_3').checked = question.asw_corr3 === 1;
+    }
+
+    if (isRevising) {
+        localStorage.setItem('dedlLastRevisedQuestion', currentIndex.toString());
+    } else {
+        localStorage.setItem('dedlLastNormalQuestion', currentIndex.toString());
     }
 }
 
@@ -130,7 +179,7 @@ function openVideoModal(videoUrl) {
 }
 
 function checkAnswers() {
-    const question = data[currentQuestionIndex];
+    const question = data[currentIndex];
     const userAnswers = [
         document.getElementById('asw_1').checked,
         document.getElementById('asw_2').checked,
@@ -151,32 +200,62 @@ function checkAnswers() {
 }
 
 function nextQuestion() {
-    if (currentQuestionIndex < data.length - 1) {
-        currentQuestionIndex++;
-        loadQuestion(currentQuestionIndex);
+    previousIndex = currentIndex;
+
+    if (isRevising) {
+        revisionIndex++;
+        if (revisionIndex >= markedQuestions.length) {
+            alert("All marked questions revised, switching to normal questions.");
+            isRevising = false;
+            const idx = localStorage.getItem("dedlLastNormalQuestion");
+            if (idx) {
+                currentIndex = parseInt(idx);
+            } else {
+                currentIndex = 0;
+            }
+        
+            nextQuestion();
+            return;
+        }
+        currentIndex = markedQuestions[revisionIndex];
+    } else {
+        currentIndex = (currentIndex + 1) % data.length;
     }
+
+    loadQuestion(currentIndex);
 }
 
 function previousQuestion() {
-    if (currentQuestionIndex > 0) {
-        currentQuestionIndex--;
-        loadQuestion(currentQuestionIndex);
-    }
+    currentIndex = previousIndex;
+    loadQuestion(previousIndex);
 }
 
 function goToQuestion(index) {
-    // const index = document.getElementById('question-index').value;
-    currentQuestionIndex = parseInt(index, 10);
-    loadQuestion(currentQuestionIndex);
+    currentIndex = parseInt(index, 10);
+    loadQuestion(currentIndex);
 }
 
-function initializeDropdown() {
+function initializeDropdown(questions) {
     const dropdown = document.getElementById('question-index');
     const imageDropdown = document.getElementById('image-question-index');
     const videoDropdown = document.getElementById('video-question-index');
     const singleDropdown = document.getElementById('single-question-index');
 
-    data.forEach((question, index) => {
+    const oneChoiceDropdown = document.getElementById('onechoice-question-index');
+    const twoChoiceDropdown = document.getElementById('twochoice-question-index');    
+    const allChoiceDropdown = document.getElementById('allchoice-question-index');
+
+    var option = document.createElement('option');
+    option.value = "revise";
+    option.text = `Revise Marked Questions`;
+    dropdown.appendChild(option);
+
+    option = document.createElement('option');
+    option.value = "normal";
+    option.text = `Normal Questions`;
+    dropdown.appendChild(option);    
+
+    questions.forEach((question, index) => {
         const option = document.createElement('option');
         option.value = index;
         option.text = `${index + 1}`;
@@ -202,19 +281,38 @@ function initializeDropdown() {
             option.text = `${index + 1}`;
             singleDropdown.appendChild(option); 
         }
+
+        var ansCnt = question.asw_corr1 + question.asw_corr2 + question.asw_corr3;
+
+        if (ansCnt == 1) {
+            const option = document.createElement('option');
+            option.value = index;
+            option.text = `${index + 1}`;
+            oneChoiceDropdown.appendChild(option); 
+        } else if (ansCnt == 2) {
+            const option = document.createElement('option');
+            option.value = index;
+            option.text = `${index + 1}`;
+            twoChoiceDropdown.appendChild(option); 
+        } else if (ansCnt == 3) {
+            const option = document.createElement('option');
+            option.value = index;
+            option.text = `${index + 1}`;
+            allChoiceDropdown.appendChild(option); 
+        }
     });
 }
 
 function markQuestion() {
-    markedQuestions.add(currentQuestionIndex);
+    markedQuestions.add(currentIndex);
     localStorage.setItem('dedlMarkedQuestions', JSON.stringify([...markedQuestions]));
-    toggleMarkButtons(currentQuestionIndex);
+    toggleMarkButtons(currentIndex);
 }
 
 function unmarkQuestion() {
-    markedQuestions.delete(currentQuestionIndex);
+    markedQuestions.delete(currentIndex);
     localStorage.setItem('dedlMarkedQuestions', JSON.stringify([...markedQuestions]));
-    toggleMarkButtons(currentQuestionIndex);
+    toggleMarkButtons(currentIndex);
 }
 
 function toggleMarkButtons(index) {
