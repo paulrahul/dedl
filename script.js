@@ -32,23 +32,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // });
 
     document.getElementById('image-question-index').addEventListener('change', (event) => {
+        isRevising = "image";
         goToQuestion(event.target.value);
     });
     document.getElementById('video-question-index').addEventListener('change', (event) => {
+        isRevising = "video";
         goToQuestion(event.target.value);
     });
     document.getElementById('single-question-index').addEventListener('change', (event) => {
+        isRevising = "single";
         goToQuestion(event.target.value);
     });
     
     
     document.getElementById('onechoice-question-index').addEventListener('change', (event) => {
+        isRevising = "one";
         goToQuestion(event.target.value);
     });
     document.getElementById('twochoice-question-index').addEventListener('change', (event) => {
+        isRevising = "two";
         goToQuestion(event.target.value);
     });
     document.getElementById('allchoice-question-index').addEventListener('change', (event) => {
+        isRevising = "three";
         goToQuestion(event.target.value);
     });        
 
