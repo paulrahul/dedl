@@ -3,8 +3,8 @@ function toggleTheme() {
     const body = document.body;
     const currentTheme = body.classList.toggle('dark-theme');
     
-    const containerElement = document.getElementById("container");
-    containerElement.classList.toggle("container-dark")
+    // const containerElement = document.getElementById("container");
+    // containerElement.classList.toggle("container-dark")
 
     // Save the user's preference in localStorage
     localStorage.setItem('dark-theme', currentTheme ? 'enabled' : 'disabled');

@@ -1,10 +1,26 @@
 let isRevising = "normal";
+
 let revisionIndex = 0;
+let imageIndex = 0;
+let videoIndex = 0;
+let singleIndex = 0;
+let oneIndex = 0;
+let twoIndex = 0;
+let threeIndex = 0;
 
 let currentIndex = 0;
 let previousIndex = 0;
 let mode = "read";  // Modes: 'play' or 'revise'
+
+
 const markedQuestions = new Set();
+const imageQuestions = new Set();
+const videoQuestions = new Set();
+const singleQuestions = new Set();
+
+const oneQuestions = new Set();
+const twoQuestions = new Set();
+const threeQuestions = new Set();
 
 document.addEventListener('DOMContentLoaded', () => {
     // Load the last normal question.
@@ -33,29 +49,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('image-question-index').addEventListener('change', (event) => {
         isRevising = "image";
-        goToQuestion(event.target.value);
+        imageIndex = parseInt(event.target.value, 10)
+        goToDropDownQuestion(imageIndex, imageQuestions);
     });
     document.getElementById('video-question-index').addEventListener('change', (event) => {
         isRevising = "video";
-        goToQuestion(event.target.value);
+        videoIndex = parseInt(event.target.value, 10)
+        goToDropDownQuestion(videoIndex, videoQuestions);
     });
     document.getElementById('single-question-index').addEventListener('change', (event) => {
         isRevising = "single";
-        goToQuestion(event.target.value);
+        singleIndex = parseInt(event.target.value, 10)
+        goToDropDownQuestion(singleIndex, singleQuestions);
     });
     
     
     document.getElementById('onechoice-question-index').addEventListener('change', (event) => {
         isRevising = "one";
-        goToQuestion(event.target.value);
+        oneIndex = parseInt(event.target.value, 10)
+        goToDropDownQuestion(oneIndex, oneQuestions);
     });
     document.getElementById('twochoice-question-index').addEventListener('change', (event) => {
         isRevising = "two";
-        goToQuestion(event.target.value);
+        twoIndex = parseInt(event.target.value, 10)
+        goToDropDownQuestion(twoIndex, twoQuestions);
     });
     document.getElementById('allchoice-question-index').addEventListener('change', (event) => {
         isRevising = "three";
-        goToQuestion(event.target.value);
+        threeIndex = parseInt(event.target.value, 10)
+        goToDropDownQuestion(threeIndex, threeQuestions);
     });        
 
     document.getElementById('mark').addEventListener('click', markQuestion);
@@ -126,7 +148,7 @@ function populateNormalQuestions() {
 
 function loadQuestion(index) {
     const question = data[index];
-    document.getElementById('question-text').innerText = "[" + (index + 1) + "/" + data.length + "] " +  question.de_text;
+    document.getElementById('question-text').innerText = "[" + (index) + "/" + data.length + "] " +  question.de_text;
     document.getElementById('question-en-text').innerText = question.en_text;
     document.getElementById('asw_text_1').innerText = question.asw_1;
     document.getElementById('asw_text_2').innerText = question.asw_2;
@@ -209,21 +231,26 @@ function nextQuestion() {
     previousIndex = currentIndex;
 
     if (isRevising == "revise") {
-        revisionIndex++;
-        if (revisionIndex >= markedQuestions.length) {
-            alert("All marked questions revised, switching to normal questions.");
-            isRevising = "normal";
-            const idx = localStorage.getItem("dedlLastNormalQuestion");
-            if (idx) {
-                currentIndex = parseInt(idx);
-            } else {
-                currentIndex = 0;
-            }
-        
-            nextQuestion();
-            return;
-        }
-        currentIndex = markedQuestions[revisionIndex];
+        revisionIndex = (revisionIndex + 1) % markedQuestions.size;
+        currentIndex = [...markedQuestions][revisionIndex];
+    } else if (isRevising == "image") {
+        imageIndex = (imageIndex + 1) % imageQuestions.size;
+        currentIndex = [...imageQuestions][imageIndex];
+    } else if (isRevising == "video") {
+        videoIndex = (videoIndex + 1) % videoQuestions.size;
+        currentIndex = [...videoQuestions][videoIndex];
+    } else if (isRevising == "single") {
+        singleIndex = (singleIndex + 1) % singleQuestions.size;
+        currentIndex = [...singleQuestions][singleIndex];
+    } else if (isRevising == "one") {
+        oneIndex = (oneIndex + 1) % oneQuestions.size;
+        currentIndex = [...oneQuestions][oneIndex];
+    } else if (isRevising == "two") {
+        twoIndex = (twoIndex + 1) % twoQuestions.size;
+        currentIndex = [...twoQuestions][twoIndex];
+    } else if (isRevising == "three") {
+        threeIndex = (threeIndex + 1) % threeQuestions.size;
+        currentIndex = [...threeQuestions][threeIndex];
     } else {
         currentIndex = (currentIndex + 1) % data.length;
     }
@@ -236,6 +263,10 @@ function previousQuestion() {
     loadQuestion(previousIndex);
 }
 
+function goToDropDownQuestion(index, questions) {
+    loadQuestion([...questions][index]);
+}
+
 function goToQuestion(index) {
     currentIndex = parseInt(index, 10);
     loadQuestion(currentIndex);
@@ -243,13 +274,6 @@ function goToQuestion(index) {
 
 function initializeDropdown(questions) {
     const dropdown = document.getElementById('question-index');
-    const imageDropdown = document.getElementById('image-question-index');
-    const videoDropdown = document.getElementById('video-question-index');
-    const singleDropdown = document.getElementById('single-question-index');
-
-    const oneChoiceDropdown = document.getElementById('onechoice-question-index');
-    const twoChoiceDropdown = document.getElementById('twochoice-question-index');    
-    const allChoiceDropdown = document.getElementById('allchoice-question-index');
 
     var option = document.createElement('option');
     option.value = "revise";
@@ -261,52 +285,58 @@ function initializeDropdown(questions) {
     option.text = `Normal Questions`;
     dropdown.appendChild(option);    
 
-    questions.forEach((question, index) => {
+    for (var index=0; index < questions.length; index++ ) {
+        var question = questions[index];
         const option = document.createElement('option');
         option.value = index;
-        option.text = `${index + 1}`;
+        option.text = `${index}`;
         dropdown.appendChild(option);
 
         if (question.picture && question.picture.endsWith(".jpg")) {
-            const option = document.createElement('option');
-            option.value = index;
-            option.text = `${index + 1}`;
-            imageDropdown.appendChild(option);    
+            imageQuestions.add(index);
         }
 
         if (question.picture && question.picture.endsWith(".m4v")) {
-            const option = document.createElement('option');
-            option.value = index;
-            option.text = `${index + 1}`;
-            videoDropdown.appendChild(option);    
+            videoQuestions.add(index);
         }
 
         if (question.asw_2 == undefined && question.asw_3 == undefined) {
-            const option = document.createElement('option');
-            option.value = index;
-            option.text = `${index + 1}`;
-            singleDropdown.appendChild(option); 
+            singleQuestions.add(index);            
         }
 
         var ansCnt = question.asw_corr1 + question.asw_corr2 + question.asw_corr3;
 
         if (ansCnt == 1) {
-            const option = document.createElement('option');
-            option.value = index;
-            option.text = `${index + 1}`;
-            oneChoiceDropdown.appendChild(option); 
+            oneQuestions.add(index);
         } else if (ansCnt == 2) {
-            const option = document.createElement('option');
-            option.value = index;
-            option.text = `${index + 1}`;
-            twoChoiceDropdown.appendChild(option); 
+            twoQuestions.add(index);
         } else if (ansCnt == 3) {
-            const option = document.createElement('option');
-            option.value = index;
-            option.text = `${index + 1}`;
-            allChoiceDropdown.appendChild(option); 
+            threeQuestions.add(index);
         }
-    });
+    }
+
+    loadDropDown(document.getElementById('image-question-index'), imageQuestions);
+    loadDropDown(document.getElementById('video-question-index'), videoQuestions);
+    loadDropDown(document.getElementById('single-question-index'), singleQuestions);
+
+    loadDropDown(document.getElementById('onechoice-question-index'), oneQuestions);
+    loadDropDown(document.getElementById('twochoice-question-index'), twoQuestions);
+    loadDropDown(document.getElementById('allchoice-question-index'), threeQuestions);
+}
+
+function loadDropDown(dropdown, dropdownQuestions) {
+    var option = document.createElement('option');
+    option.value = "select";
+    option.text = `Select`;
+    dropdown.appendChild(option);
+    
+    for (var index = 0; index < dropdownQuestions.size; index++) {
+        var value = [...dropdownQuestions][index];
+        const option = document.createElement('option');
+        option.value = index;
+        option.text = `${value}`;
+        dropdown.appendChild(option);
+    }
 }
 
 function markQuestion() {
