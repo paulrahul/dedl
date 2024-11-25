@@ -1,37 +1,93 @@
-let isRevising = "normal";
-
-let revisionIndex = 0;
-let imageIndex = 0;
-let videoIndex = 0;
-let singleIndex = 0;
-let oneIndex = 0;
-let twoIndex = 0;
-let threeIndex = 0;
-
 let currentIndex = 0;
 let previousIndex = 0;
 let mode = "read";  // Modes: 'play' or 'revise'
 
-
 const markedQuestions = new Set();
-const imageQuestions = new Set();
-const videoQuestions = new Set();
-const singleQuestions = new Set();
 
-const oneQuestions = new Set();
-const twoQuestions = new Set();
-const threeQuestions = new Set();
+let categoryCollection = {};
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Load the last normal question.
-    const idx = localStorage.getItem("dedlLastNormalQuestion");
-    if (idx) {
-        currentIndex = parseInt(idx);
+const Mode = {
+    Normal: "normal",
+    Revise: "revise",
+
+	Image: "image",
+	Video: "video",
+	Single: "single",
+
+	One: "one",
+    Two: "two",
+    Three: "three"
+}
+
+let currentMode = localStorage.getItem("currentMode");
+if (!currentMode) {
+    currentMode = Mode.Normal;
+}
+
+function getModeIndex(mode) {
+    let key = "dedlLast" + mode + "Question";
+
+    if (mode == Mode.Revise) {
+        key = 'dedlLastRevisedQuestion';
+    } else if (mode == Mode.Normal) {
+        key = 'dedlLastNormalQuestion';
     }
 
+    const idx = localStorage.getItem(key);
+    if (idx) {
+        return parseInt(idx);
+    }
+
+    return -1;
+}
+
+function getCurrentModeIndex() {
+    const index = getModeIndex(currentMode);
+    if (currentMode == Mode.Normal) {
+        return 0;
+    }
+
+    return index;
+}
+
+function getDropDownIndex(questions, normalIndex) {
+    // Returns which array index 'normalIndex' corresponds to in the
+    // given questions array.
+    const arr = Array.from(questions); // Convert Set to Array
+    return arr.indexOf(normalIndex);
+}
+
+function selectDropdownItem(mode, normalIndex) {
+    const dropdown = document.getElementById(mode + '-question-index');
+    let indexToSelect = getDropDownIndex(categoryCollection[mode]["questions"], normalIndex);
+
+    if (indexToSelect >= 0) {
+        categoryCollection[mode]["index"] = indexToSelect;           
+        indexToSelect++;
+        if (indexToSelect < dropdown.options.length) {
+            dropdown.selectedIndex = indexToSelect;
+        }            
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    categoryCollection = Object.values(Mode).reduce((acc, key) => {
+        acc[key] = { questions: new Set(), index: 0 };
+        return acc;
+    }, {});
+
+    // Load the last mode question.
+    currentIndex = getCurrentModeIndex();
     loadQuestion(currentIndex);
+
     initializeDropdown(data);
     loadMarkedQuestions();
+
+    // Select mode radio and mode drop down item.
+    if (currentMode != Mode.Normal && currentMode != Mode.Revise) {
+        document.getElementById('radio-' + currentMode).checked = true;        
+        selectDropdownItem(currentMode, currentIndex);
+    }
 
     document.getElementById('submit').addEventListener('click', checkAnswers);
     document.getElementById('next').addEventListener('click', nextQuestion);
@@ -48,37 +104,50 @@ document.addEventListener('DOMContentLoaded', () => {
     // });
 
     document.getElementById('image-question-index').addEventListener('change', (event) => {
-        isRevising = "image";
-        imageIndex = parseInt(event.target.value, 10)
-        goToDropDownQuestion(imageIndex, imageQuestions);
+        currentMode = Mode.Image;
+        goToDropDownQuestion(parseInt(event.target.value, 10));
     });
     document.getElementById('video-question-index').addEventListener('change', (event) => {
-        isRevising = "video";
-        videoIndex = parseInt(event.target.value, 10)
-        goToDropDownQuestion(videoIndex, videoQuestions);
+        currentMode = Mode.Video;
+        goToDropDownQuestion(parseInt(event.target.value, 10));
     });
     document.getElementById('single-question-index').addEventListener('change', (event) => {
-        isRevising = "single";
-        singleIndex = parseInt(event.target.value, 10)
-        goToDropDownQuestion(singleIndex, singleQuestions);
+        currentMode = Mode.Single;
+        goToDropDownQuestion(parseInt(event.target.value, 10));
     });
     
-    
-    document.getElementById('onechoice-question-index').addEventListener('change', (event) => {
-        isRevising = "one";
-        oneIndex = parseInt(event.target.value, 10)
-        goToDropDownQuestion(oneIndex, oneQuestions);
+    document.getElementById('one-question-index').addEventListener('change', (event) => {
+        currentMode = Mode.One;
+        goToDropDownQuestion(parseInt(event.target.value, 10));
     });
-    document.getElementById('twochoice-question-index').addEventListener('change', (event) => {
-        isRevising = "two";
-        twoIndex = parseInt(event.target.value, 10)
-        goToDropDownQuestion(twoIndex, twoQuestions);
+    document.getElementById('two-question-index').addEventListener('change', (event) => {
+        currentMode = Mode.Two;
+        goToDropDownQuestion(parseInt(event.target.value, 10));
     });
-    document.getElementById('allchoice-question-index').addEventListener('change', (event) => {
-        isRevising = "three";
-        threeIndex = parseInt(event.target.value, 10)
-        goToDropDownQuestion(threeIndex, threeQuestions);
-    });        
+    document.getElementById('three-question-index').addEventListener('change', (event) => {
+        currentMode = Mode.Three;
+        goToDropDownQuestion(parseInt(event.target.value, 10));
+    });
+
+    const radios = document.querySelectorAll('[id^="radio-"]');
+    // Add the event listener to each radio button
+    radios.forEach(radio => {
+        radio.addEventListener('change', (event) => {
+            currentMode = event.target.value;
+            let normalIndex = getCurrentModeIndex();
+            if (normalIndex >= 0) {
+                goToQuestion(normalIndex);
+                // Set this mode's drop down index.
+                categoryCollection[currentMode]["index"] = getDropDownIndex(
+                    categoryCollection[currentMode]["questions"], normalIndex);
+                selectDropdownItem(currentMode, normalIndex);                    
+            } else {
+                // No previous question for this mode persisted. Go to first
+                // index.
+                goToDropDownQuestion(0);
+            }
+        });
+    });
 
     document.getElementById('mark').addEventListener('click', markQuestion);
     document.getElementById('unmark').addEventListener('click', unmarkQuestion);
@@ -126,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function populateMarkedQuestions() {
     initializeDropdown(markedQuestions);
-    isRevising = "revise";
+    currentMode = Mode.Revise;
     // Load the last revised question.
     const idx = localStorage.getItem("dedlLastRevisedQuestion");
     if (idx) {
@@ -137,12 +206,8 @@ function populateMarkedQuestions() {
 
 function populateNormalQuestions() {
     initializeDropdown(Array.from(Array(data.length).keys()));
-    isRevising = "normal";
-    // Load the last normal question.
-    const idx = localStorage.getItem("dedlLastNormalQuestion");
-    if (idx) {
-        currentIndex = parseInt(idx);
-    }
+    currentMode = Mode.Normal;
+    currentIndex = getCurrentModeIndex();
     loadQuestion();
 }
 
@@ -192,11 +257,16 @@ function loadQuestion(index) {
         document.getElementById('asw_3').checked = question.asw_corr3 === 1;
     }
 
-    if (isRevising == "revise") {
+    if (currentMode == Mode.Revise) {
         localStorage.setItem('dedlLastRevisedQuestion', currentIndex.toString());
-    } else if (isRevising == "normal") {
+    } else if (currentMode == Mode.Normal) {
         localStorage.setItem('dedlLastNormalQuestion', currentIndex.toString());
+    } else {
+        let key = "dedlLast" + currentMode + "Question";
+        localStorage.setItem(key, currentIndex.toString());
     }
+
+    localStorage.setItem("currentMode", currentMode);
 }
 
 function openVideoModal(videoUrl) {
@@ -230,29 +300,22 @@ function checkAnswers() {
 function nextQuestion() {
     previousIndex = currentIndex;
 
-    if (isRevising == "revise") {
-        revisionIndex = (revisionIndex + 1) % markedQuestions.size;
-        currentIndex = [...markedQuestions][revisionIndex];
-    } else if (isRevising == "image") {
-        imageIndex = (imageIndex + 1) % imageQuestions.size;
-        currentIndex = [...imageQuestions][imageIndex];
-    } else if (isRevising == "video") {
-        videoIndex = (videoIndex + 1) % videoQuestions.size;
-        currentIndex = [...videoQuestions][videoIndex];
-    } else if (isRevising == "single") {
-        singleIndex = (singleIndex + 1) % singleQuestions.size;
-        currentIndex = [...singleQuestions][singleIndex];
-    } else if (isRevising == "one") {
-        oneIndex = (oneIndex + 1) % oneQuestions.size;
-        currentIndex = [...oneQuestions][oneIndex];
-    } else if (isRevising == "two") {
-        twoIndex = (twoIndex + 1) % twoQuestions.size;
-        currentIndex = [...twoQuestions][twoIndex];
-    } else if (isRevising == "three") {
-        threeIndex = (threeIndex + 1) % threeQuestions.size;
-        currentIndex = [...threeQuestions][threeIndex];
-    } else {
-        currentIndex = (currentIndex + 1) % data.length;
+    switch (currentMode) {
+        case Mode.Revise:
+        case Mode.Image:
+        case Mode.Video:
+        case Mode.Single:
+        case Mode.One:
+        case Mode.Two:
+        case Mode.Three:
+            let index = categoryCollection[currentMode]["index"]
+            let questions = categoryCollection[currentMode]["questions"]
+            index = (index  + 1) % questions.size
+            categoryCollection[currentMode]["index"] = index;        
+            currentIndex = [...questions][index];
+            break;
+        default:
+            currentIndex = (currentIndex + 1) % data.length;
     }
 
     loadQuestion(currentIndex);
@@ -263,8 +326,11 @@ function previousQuestion() {
     loadQuestion(previousIndex);
 }
 
-function goToDropDownQuestion(index, questions) {
-    loadQuestion([...questions][index]);
+function goToDropDownQuestion(index) {
+    categoryCollection[currentMode]["index"] = index;
+    let questions = categoryCollection[currentMode]["questions"];
+    currentIndex = [...questions][index]
+    loadQuestion(currentIndex);
 }
 
 function goToQuestion(index) {
@@ -293,35 +359,35 @@ function initializeDropdown(questions) {
         dropdown.appendChild(option);
 
         if (question.picture && question.picture.endsWith(".jpg")) {
-            imageQuestions.add(index);
+            categoryCollection[Mode.Image]["questions"].add(index);
         }
 
         if (question.picture && question.picture.endsWith(".m4v")) {
-            videoQuestions.add(index);
+            categoryCollection[Mode.Video]["questions"].add(index);
         }
 
         if (question.asw_2 == undefined && question.asw_3 == undefined) {
-            singleQuestions.add(index);            
+            categoryCollection[Mode.Single]["questions"].add(index);            
         }
 
         var ansCnt = question.asw_corr1 + question.asw_corr2 + question.asw_corr3;
 
         if (ansCnt == 1) {
-            oneQuestions.add(index);
+            categoryCollection[Mode.One]["questions"].add(index);            
         } else if (ansCnt == 2) {
-            twoQuestions.add(index);
+            categoryCollection[Mode.Two]["questions"].add(index);            
         } else if (ansCnt == 3) {
-            threeQuestions.add(index);
+            categoryCollection[Mode.Three]["questions"].add(index);            
         }
     }
 
-    loadDropDown(document.getElementById('image-question-index'), imageQuestions);
-    loadDropDown(document.getElementById('video-question-index'), videoQuestions);
-    loadDropDown(document.getElementById('single-question-index'), singleQuestions);
+    loadDropDown(document.getElementById('image-question-index'), categoryCollection[Mode.Image]["questions"]);
+    loadDropDown(document.getElementById('video-question-index'), categoryCollection[Mode.Video]["questions"]);
+    loadDropDown(document.getElementById('single-question-index'), categoryCollection[Mode.Single]["questions"]);
 
-    loadDropDown(document.getElementById('onechoice-question-index'), oneQuestions);
-    loadDropDown(document.getElementById('twochoice-question-index'), twoQuestions);
-    loadDropDown(document.getElementById('allchoice-question-index'), threeQuestions);
+    loadDropDown(document.getElementById('one-question-index'), categoryCollection[Mode.One]["questions"]);
+    loadDropDown(document.getElementById('two-question-index'), categoryCollection[Mode.Two]["questions"]);
+    loadDropDown(document.getElementById('three-question-index'), categoryCollection[Mode.Three]["questions"]);
 }
 
 function loadDropDown(dropdown, dropdownQuestions) {
